@@ -1,0 +1,67 @@
+{
+  "tools" : [ {
+    "name" : "skypulse_get_forecast",
+    "description" : "Get weather forecast for any location",
+    "inputSchema" : {
+      "type" : "object",
+      "properties" : {
+        "latitude" : {
+          "format" : "double",
+          "type" : "number",
+          "description" : "Query parameter 'latitude'"
+        },
+        "longitude" : {
+          "format" : "double",
+          "type" : "number",
+          "description" : "Query parameter 'longitude'"
+        },
+        "current_weather" : {
+          "default" : true,
+          "type" : "boolean",
+          "description" : "Query parameter 'current_weather'"
+        },
+        "hourly" : {
+          "type" : "string",
+          "description" : "Query parameter 'hourly'"
+        },
+        "daily" : {
+          "type" : "string",
+          "description" : "Query parameter 'daily'"
+        },
+        "timezone" : {
+          "default" : "auto",
+          "type" : "string",
+          "description" : "Query parameter 'timezone'"
+        }
+      },
+      "required" : [ "latitude", "longitude" ],
+      "additionalProperties" : true
+    },
+    "http" : {
+      "method" : "GET",
+      "path" : "/forecast",
+      "pathParams" : [ ],
+      "query" : [ {
+        "arg" : "latitude",
+        "name" : "latitude"
+      }, {
+        "arg" : "longitude",
+        "name" : "longitude"
+      }, {
+        "arg" : "current_weather",
+        "name" : "current_weather"
+      }, {
+        "arg" : "hourly",
+        "name" : "hourly"
+      }, {
+        "arg" : "daily",
+        "name" : "daily"
+      }, {
+        "arg" : "timezone",
+        "name" : "timezone"
+      } ],
+      "headers" : [ ],
+      "bodyArg" : null
+    }
+  } ]
+}
