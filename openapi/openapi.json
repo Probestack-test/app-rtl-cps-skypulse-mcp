@@ -1,0 +1,94 @@
+{
+  "openapi" : "3.0.3",
+  "info" : {
+    "title" : "SkyPulse MCP",
+    "version" : "1.0.0",
+    "description" : "SkyPulse — Live weather intelligence MCP server powered by Open-Meteo.\nReal API: https://api.open-meteo.com/v1\nNo API key required. Free forever.\n",
+    "contact" : {
+      "name" : "SkyPulse",
+      "email" : "hello@skypulse.dev"
+    }
+  },
+  "servers" : [ {
+    "url" : "https://api.open-meteo.com/v1",
+    "description" : "Open-Meteo Live API"
+  } ],
+  "tags" : [ {
+    "name" : "Weather",
+    "description" : "Live weather forecast and current conditions"
+  } ],
+  "paths" : {
+    "/forecast" : {
+      "get" : {
+        "tags" : [ "Weather" ],
+        "summary" : "Get weather forecast for any location",
+        "operationId" : "skypulse_get_forecast",
+        "parameters" : [ {
+          "name" : "latitude",
+          "in" : "query",
+          "required" : true,
+          "schema" : {
+            "type" : "number",
+            "format" : "double"
+          },
+          "example" : 28.6139
+        }, {
+          "name" : "longitude",
+          "in" : "query",
+          "required" : true,
+          "schema" : {
+            "type" : "number",
+            "format" : "double"
+          },
+          "example" : 77.209
+        }, {
+          "name" : "current_weather",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "boolean",
+            "default" : true
+          }
+        }, {
+          "name" : "hourly",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          },
+          "example" : "temperature_2m,relativehumidity_2m"
+        }, {
+          "name" : "daily",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          },
+          "example" : "temperature_2m_max,temperature_2m_min"
+        }, {
+          "name" : "timezone",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string",
+            "default" : "auto"
+          },
+          "example" : "Asia/Kolkata"
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Live weather data",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object",
+                  "additionalProperties" : true
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

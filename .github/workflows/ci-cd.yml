@@ -1,0 +1,192 @@
+name: CI/CD - skypulse-mcp Deploy to Cloud Run
+
+on:
+  push:
+    # The development branch, plus the CI/CD profile's "merge" branch when there is one.
+    branches:
+      - 'feature-adarsha'
+      - 'release'
+    # Documentation-only changes never affect the deployed image.
+    paths-ignore:
+      - '**/*.md'
+      - 'docs/**'
+      - 'postman/**'
+      - '.gitignore'
+      - '.github/CODEOWNERS'
+      - 'LICENSE'
+  workflow_dispatch:
+
+# A newer push to the same branch replaces an in-flight run instead of racing it.
+concurrency:
+  group: skypulse-mcp-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PROJECT_ID:                 probestack-prod
+  REGION:                     us-central1
+  SERVICE_NAME:               skypulse-mcp
+  REPOSITORY:                 probestack-prod-apps
+  SERVICE_ACCOUNT_EMAIL:      github-actions-forgecrux@probestack-prod.iam.gserviceaccount.com
+  WORKLOAD_IDENTITY_PROVIDER: projects/861433193200/locations/global/workloadIdentityPools/github-pool/providers/github-provider
+  ARTIFACT_REGISTRY_HOST:     us-central1-docker.pkg.dev
+  CONTAINER_PORT:             "8080"
+  MCP_PATH:                   "/mcp"
+  HEALTH_PATH:                "/health"
+  MCP_LANGUAGE:               TYPESCRIPT
+
+jobs:
+  # ───────────────────────── 1. Build and test ─────────────────────────
+  build-and-test:
+    name: build-and-test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Type check
+        run: npm run typecheck
+
+      - name: Run unit tests
+        run: npm test
+
+      - name: Security scan (npm audit)
+        run: npm audit --omit=dev --audit-level=high
+        continue-on-error: true
+
+      - name: Build
+        run: npm run build
+
+  # ───────────────── 2. Build the image and deploy to Cloud Run ─────────────────
+  deploy:
+    name: deploy
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/feature-adarsha' || github.ref == 'refs/heads/release')
+
+    permissions:
+      contents: read
+      id-token: write
+
+    outputs:
+      service_url: ${{ steps.svcurl.outputs.service_url }}
+      mcp_url:     ${{ steps.svcurl.outputs.mcp_url }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # The server refuses to start without its credentials, so fail here with a clear message
+      # instead of with a Cloud Run revision that never becomes ready.
+      - name: Verify required secrets
+        env:
+          MCP_OAUTH_CLIENT_ID: ${{ secrets.MCP_OAUTH_CLIENT_ID || 'mcp-client' }}
+          MCP_OAUTH_CLIENT_SECRET: ${{ secrets.MCP_OAUTH_CLIENT_SECRET || '241adfe95b1100246738367153f46e5fda5741bc64f63198' }}
+          MCP_OAUTH_SIGNING_KEY: ${{ secrets.MCP_OAUTH_SIGNING_KEY || '0917020b5beee415c8e19c5af5e28f95a78ad1c82c3ccc55bcb465cacb8f67cf' }}
+        run: |
+          missing=0
+          for name in MCP_OAUTH_CLIENT_ID MCP_OAUTH_CLIENT_SECRET MCP_OAUTH_SIGNING_KEY; do
+            if [ -z "${!name}" ]; then
+              echo "::error::The repository secret $name is not set. Add it under Settings > Secrets and variables > Actions, or run: gh secret set $name"
+              missing=1
+            fi
+          done
+          exit $missing
+
+      - name: Authenticate to Google Cloud
+        id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ env.WORKLOAD_IDENTITY_PROVIDER }}
+          service_account:            ${{ env.SERVICE_ACCOUNT_EMAIL }}
+          token_format:               access_token
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ env.PROJECT_ID }}
+
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker ${{ env.ARTIFACT_REGISTRY_HOST }} --quiet
+
+      - name: Build and Push Docker Image
+        run: |
+          IMAGE_NAME=${{ env.ARTIFACT_REGISTRY_HOST }}/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE_NAME }}
+          docker build -t ${IMAGE_NAME}:${{ github.sha }} .
+          docker push ${IMAGE_NAME}:${{ github.sha }}
+
+      - name: Deploy to Cloud Run
+        env:
+          MCP_OAUTH_CLIENT_ID: ${{ secrets.MCP_OAUTH_CLIENT_ID || 'mcp-client' }}
+          MCP_OAUTH_CLIENT_SECRET: ${{ secrets.MCP_OAUTH_CLIENT_SECRET || '241adfe95b1100246738367153f46e5fda5741bc64f63198' }}
+          MCP_OAUTH_SIGNING_KEY: ${{ secrets.MCP_OAUTH_SIGNING_KEY || '0917020b5beee415c8e19c5af5e28f95a78ad1c82c3ccc55bcb465cacb8f67cf' }}
+          UPSTREAM_BASE_URL: ${{ vars.UPSTREAM_BASE_URL }}
+        run: |
+          IMAGE_NAME=${{ env.ARTIFACT_REGISTRY_HOST }}/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE_NAME }}
+          # Environment variables go through a file so values containing commas (a list of API keys) survive.
+          jq -n --arg MCP_OAUTH_CLIENT_ID "$MCP_OAUTH_CLIENT_ID" --arg MCP_OAUTH_CLIENT_SECRET "$MCP_OAUTH_CLIENT_SECRET" --arg MCP_OAUTH_SIGNING_KEY "$MCP_OAUTH_SIGNING_KEY" --arg UPSTREAM_BASE_URL "$UPSTREAM_BASE_URL" \
+            '{MCP_OAUTH_CLIENT_ID: $MCP_OAUTH_CLIENT_ID, MCP_OAUTH_CLIENT_SECRET: $MCP_OAUTH_CLIENT_SECRET, MCP_OAUTH_SIGNING_KEY: $MCP_OAUTH_SIGNING_KEY, UPSTREAM_BASE_URL: $UPSTREAM_BASE_URL} | with_entries(select(.value != ""))' > "$RUNNER_TEMP/env.json"
+          gcloud run deploy ${{ env.SERVICE_NAME }} \
+            --image=${IMAGE_NAME}:${{ github.sha }} \
+            --platform=managed \
+            --region=${{ env.REGION }} \
+            --allow-unauthenticated \
+            --port=${{ env.CONTAINER_PORT }} \
+            --memory=512Mi \
+            --cpu=1 \
+            --min-instances=0 \
+            --max-instances=10 \
+            --timeout=300 \
+            --concurrency=80 \
+            --service-account=${{ env.SERVICE_ACCOUNT_EMAIL }} \
+            --env-vars-file="$RUNNER_TEMP/env.json" \
+            --quiet
+          rm -f "$RUNNER_TEMP/env.json"
+
+      - name: Get Service URL
+        id: svcurl
+        run: |
+          SERVICE_URL=$(gcloud run services describe ${{ env.SERVICE_NAME }} \
+            --region=${{ env.REGION }} \
+            --format='value(status.url)')
+          MCP_URL="${SERVICE_URL}${MCP_PATH}"
+          echo "service_url=${SERVICE_URL}" >> "$GITHUB_OUTPUT"
+          echo "mcp_url=${MCP_URL}"         >> "$GITHUB_OUTPUT"
+
+      - name: Write Deployed URL to Step Summary
+        run: |
+          {
+            echo "## MCP server deployed"
+            echo ""
+            echo "| | URL |"
+            echo "| --- | --- |"
+            echo "| **Service**  | ${{ steps.svcurl.outputs.service_url }} |"
+            echo "| **MCP endpoint** | \`${{ steps.svcurl.outputs.mcp_url }}\` |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Save Deployed URL as Artifact File
+        run: |
+          cat > "${{ github.workspace }}/.deploy-url.json" <<EOF
+          {
+            "service":   "${{ env.SERVICE_NAME }}",
+            "region":    "${{ env.REGION }}",
+            "url":       "${{ steps.svcurl.outputs.service_url }}",
+            "mcpUrl":    "${{ steps.svcurl.outputs.mcp_url }}",
+            "sha":       "${{ github.sha }}",
+            "deployedAt":"$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          }
+          EOF
+
+      - name: Upload Deployed URL Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: deployment-url
+          path: ${{ github.workspace }}/.deploy-url.json
+          if-no-files-found: ignore
+        continue-on-error: true
