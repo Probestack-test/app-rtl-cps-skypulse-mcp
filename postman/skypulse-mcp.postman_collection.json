@@ -1,0 +1,1291 @@
+{
+  "info" : {
+    "_postman_id" : "41f501f3-de8e-338a-8eee-66cca6c54fcc",
+    "name" : "SkyPulse MCP - MCP tests",
+    "description" : "JSON-RPC tests for the SkyPulse MCP MCP server (1 tools). Fill in the collection variables, then run the collection. Positive tests check that the MCP call succeeds; what the target API returns is not asserted.",
+    "schema" : "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth" : {
+    "type" : "bearer",
+    "bearer" : [ {
+      "value" : "{{accessToken}}",
+      "type" : "string",
+      "key" : "token"
+    } ]
+  },
+  "event" : [ {
+    "script" : {
+      "type" : "text/javascript",
+      "exec" : [ "// Gets an access token from the server's token endpoint when there is none yet or it is about to expire.", "const expiresAt = Number(pm.collectionVariables.get('accessTokenExpiresAt') || 0);", "if (!pm.collectionVariables.get('accessToken') || Date.now() >= expiresAt) {", "  pm.sendRequest({", "    url: pm.variables.replaceIn('{{baseUrl}}/oauth/token'),", "    method: 'POST',", "    header: { 'Content-Type': 'application/x-www-form-urlencoded' },", "    body: {", "      mode: 'urlencoded',", "      urlencoded: [", "        { key: 'grant_type', value: 'client_credentials' },", "        { key: 'client_id', value: pm.variables.replaceIn('{{clientId}}') },", "        { key: 'client_secret', value: pm.variables.replaceIn('{{clientSecret}}') }", "      ]", "    }", "  }, (error, response) => {", "    if (error || response.code !== 200) {", "      console.error('Could not get an access token', error || response.text());", "    } else {", "      const token = response.json();", "      pm.collectionVariables.set('accessToken', token.access_token);", "      pm.collectionVariables.set('accessTokenExpiresAt', String(Date.now() + (token.expires_in - 30) * 1000));", "    }", "  });", "}" ]
+    },
+    "listen" : "prerequest"
+  } ],
+  "variable" : [ {
+    "value" : "http://localhost:8080",
+    "key" : "baseUrl"
+  }, {
+    "value" : "/mcp",
+    "key" : "mcpPath"
+  }, {
+    "value" : "mcp-client",
+    "key" : "clientId"
+  }, {
+    "value" : "241adfe95b1100246738367153f46e5fda5741bc64f63198",
+    "key" : "clientSecret"
+  }, {
+    "value" : "",
+    "key" : "accessToken"
+  }, {
+    "value" : "0",
+    "key" : "accessTokenExpiresAt"
+  } ],
+  "item" : [ {
+    "name" : "Lifecycle",
+    "item" : [ {
+      "name" : "initialize",
+      "request" : {
+        "method" : "POST",
+        "header" : [ {
+          "value" : "application/json",
+          "type" : "text",
+          "key" : "Content-Type"
+        }, {
+          "value" : "application/json, text/event-stream",
+          "type" : "text",
+          "key" : "Accept"
+        } ],
+        "body" : {
+          "mode" : "raw",
+          "raw" : "{\n  \"jsonrpc\" : \"2.0\",\n  \"id\" : 1,\n  \"method\" : \"initialize\",\n  \"params\" : {\n    \"capabilities\" : { },\n    \"protocolVersion\" : \"2025-03-26\",\n    \"clientInfo\" : {\n      \"version\" : \"1.0.0\",\n      \"name\" : \"postman\"\n    }\n  }\n}\n",
+          "options" : {
+            "raw" : {
+              "language" : "json"
+            }
+          }
+        },
+        "url" : "{{baseUrl}}{{mcpPath}}#/initialize-1"
+      },
+      "event" : [ {
+        "script" : {
+          "type" : "text/javascript",
+          "exec" : [ "pm.test('HTTP 200', () => pm.response.to.have.status(200));", "const body = pm.response.json();", "pm.test('JSON-RPC result returned', () => { pm.expect(body.error).to.be.undefined; pm.expect(body.result).to.be.an('object'); });", "pm.test('Server identifies itself', () => pm.expect(body.result.serverInfo.name).to.eql('skypulse-mcp'));" ]
+        },
+        "listen" : "test"
+      } ],
+      "response" : [ {
+        "name" : "200 OK",
+        "originalRequest" : {
+          "method" : "POST",
+          "header" : [ {
+            "value" : "application/json",
+            "type" : "text",
+            "key" : "Content-Type"
+          }, {
+            "value" : "application/json, text/event-stream",
+            "type" : "text",
+            "key" : "Accept"
+          } ],
+          "body" : {
+            "mode" : "raw",
+            "raw" : "{\n  \"jsonrpc\" : \"2.0\",\n  \"id\" : 1,\n  \"method\" : \"initialize\",\n  \"params\" : {\n    \"capabilities\" : { },\n    \"protocolVersion\" : \"2025-03-26\",\n    \"clientInfo\" : {\n      \"version\" : \"1.0.0\",\n      \"name\" : \"postman\"\n    }\n  }\n}\n",
+            "options" : {
+              "raw" : {
+                "language" : "json"
+              }
+            }
+          },
+          "url" : "{{baseUrl}}{{mcpPath}}#/initialize-1"
+        },
+        "status" : "OK",
+        "code" : 200,
+        "_postman_previewlanguage" : "json",
+        "header" : [ {
+          "value" : "application/json",
+          "type" : "text",
+          "key" : "Content-Type"
+        } ],
+        "cookie" : [ ],
+        "body" : "{\n  \"jsonrpc\" : \"2.0\",\n  \"id\" : 1,\n  \"result\" : {\n    \"capabilities\" : {\n      \"tools\" : {\n        \"listChanged\" : false\n      }\n    },\n    \"protocolVersion\" : \"2025-03-26\",\n    \"serverInfo\" : {\n      \"version\" : \"1.0.0\",\n      \"name\" : \"server\"\n    }\n  }\n}\n"
+      }, {
+        "name" : "401 Unauthorized",
+        "originalRequest" : {
+          "method" : "POST",
+          "header" : [ {
+            "value" : "application/json",
+            "type" : "text",
+            "key" : "Content-Type"
+          }, {
+            "value" : "application/json, text/event-stream",
+            "type" : "text",
+            "key" : "Accept"
+          } ],
+          "body" : {
+            "mode" : "raw",
+            "raw" : "{\n  \"jsonrpc\" : \"2.0\",\n  \"id\" : 1,\n  \"method\" : \"initialize\",\n  \"params\" : {\n    \"capabilities\" : { },\n    \"protocolVersion\" : \"2025-03-26\",\n    \"clientInfo\" : {\n      \"version\" : \"1.0.0\",\n      \"name\" : \"postman\"\n    }\n  }\n}\n",
+            "options" : {
+              "raw" : {
+                "language" : "json"
+              }
+            }
+          },
+          "url" : "{{baseUrl}}{{mcpPath}}#/initialize-1"
+        },
+        "status" : "Unauthorized",
+        "code" : 401,
+        "_postman_previewlanguage" : "json",
+        "header" : [ {
+          "value" : "application/json",
+          "type" : "text",
+          "key" : "Content-Type"
+        } ],
+        "cookie" : [ ],
+        "body" : "{\n  \"error_description\" : \"Authentication is required.\",\n  \"error\" : \"unauthorized\"\n}\n"
+      } ]
+    }, {
+      "name" : "ping",
+      "request" : {
+        "method" : "POST",
+        "header" : [ {
+          "value" : "application/json",
+          "type" : "text",
+          "key" : "Content-Type"
+        }, {
+          "value" : "application/json, text/event-stream",
+          "type" : "text",
+          "key" : "Accept"
+        } ],
+        "body" : {
+          "mode" : "raw",
+          "raw" : "{\n  \"jsonrpc\" : \"2.0\",\n  \"id\" : 2,\n  \"method\" : \"ping\",\n  \"params\" : { }\n}\n",
+          "options" : {
+            "raw" : {
+              "language" : "json"
+            }
+          }
+        },
+        "url" : "{{baseUrl}}{{mcpPath}}#/ping-2"
+      },
+      "event" : [ {
+        "script" : {
+          "type" : "text/javascript",
+          "exec" : [ "pm.test('HTTP 200', () => pm.response.to.have.status(200));", "const body = pm.response.json();", "pm.test('JSON-RPC result returned', () => { pm.expect(body.error).to.be.undefined; pm.expect(body.result).to.be.an('object'); });" ]
+        },
+        "listen" : "test"
+      } ],
+      "response" : [ {
+        "name" : "200 OK",
+        "originalRequest" : {
+          "method" : "POST",
+          "header" : [ {
+            "value" : "application/json",
+            "type" : "text",
+            "key" : "Content-Type"
+          }, {
+            "value" : "application/json, text/event-stream",
+            "type" : "text",
+            "key" : "Accept"
+          } ],
+          "body" : {
+            "mode" : "raw",
+            "raw" : "{\n  \"jsonrpc\" : \"2.0\",\n  \"id\" : 2,\n  \"method\" : \"ping\",\n  \"params\" : { }\n}\n",
+            "options" : {
+              "raw" : {
+                "language" : "json"
+              }
+            }
+          },
+          "url" : "{{baseUrl}}{{mcpPath}}#/ping-2"
+        },
+        "status" : "OK",
+        "code" : 200,
+        "_postman_previewlanguage" : "json",
+        "header" : [ {
+          "value" : "application/json",
+          "type" : "text",
+          "key" : "Content-Type"
+        } ],
+        "cookie" : [ ],
+        "body" : "{\n  \"jsonrpc\" : \"2.0\",\n  \"id\" : 2,\n  \"result\" : { }\n}\n"
+      }, {
+        "name" : "401 Unauthorized",
+        "originalRequest" : {
+          "method" : "POST",
+          "header" : [ {
+            "value" : "application/json",
+            "type" : "text",
+            "key" : "Content-Type"
+          }, {
+            "value" : "application/json, text/event-stream",
+            "type" : "text",
+            "key" : "Accept"
+          } ],
+          "body" : {
+            "mode" : "raw",
+            "raw" : "{\n  \"jsonrpc\" : \"2.0\",\n  \"id\" : 2,\n  \"method\" : \"ping\",\n  \"params\" : { }\n}\n",
+            "options" : {
+              "raw" : {
+                "language" : "json"
+              }
+            }
+          },
+          "url" : "{{baseUrl}}{{mcpPath}}#/ping-2"
+        },
+        "status" : "Unauthorized",
+        "code" : 401,
+        "_postman_previewlanguage" : "json",
+        "header" : [ {
+          "value" : "application/json",
+          "type" : "text",
+          "key" : "Content-Type"
+        } ],
+        "cookie" : [ ],
+        "body" : "{\n  \"error_description\" : \"Authentication is required.\",\n  \"error\" : \"unauthorized\"\n}\n"
+      } ]
+    }, {
+      "name" : "tools/list",
+      "request" : {
+        "method" : "POST",
+        "header" : [ {
+          "value" : "application/json",
+          "type" : "text",
+          "key" : "Content-Type"
+        }, {
+          "value" : "application/json, text/event-stream",
+          "type" : "text",
+          "key" : "Accept"
+        } ],
+        "body" : {
+          "mode" : "raw",
+          "raw" : "{\n  \"jsonrpc\" : \"2.0\",\n  \"id\" : 3,\n  \"method\" : \"tools/list\",\n  \"params\" : { }\n}\n",
+          "options" : {
+            "raw" : {
+              "language" : "json"
+            }
+          }
+        },
+        "url" : "{{baseUrl}}{{mcpPath}}#/tools-list-3"
+      },
+      "event" : [ {
+        "script" : {
+          "type" : "text/javascript",
+          "exec" : [ "pm.test('HTTP 200', () => pm.response.to.have.status(200));", "const body = pm.response.json();", "pm.test('JSON-RPC result returned', () => { pm.expect(body.error).to.be.undefined; pm.expect(body.result).to.be.an('object'); });", "pm.test('Lists 1 tools', () => pm.expect(body.result.tools).to.have.lengthOf(1));" ]
+        },
+        "listen" : "test"
+      } ],
+      "response" : [ {
+        "name" : "200 OK",
+        "originalRequest" : {
+          "method" : "POST",
+          "header" : [ {
+            "value" : "application/json",
+            "type" : "text",
+            "key" : "Content-Type"
+          }, {
+            "value" : "application/json, text/event-stream",
+            "type" : "text",
+            "key" : "Accept"
+          } ],
+          "body" : {
+            "mode" : "raw",
+            "raw" : "{\n  \"jsonrpc\" : \"2.0\",\n  \"id\" : 3,\n  \"method\" : \"tools/list\",\n  \"params\" : { }\n}\n",
+            "options" : {
+              "raw" : {
+                "language" : "json"
+              }
+            }
+          },
+          "url" : "{{baseUrl}}{{mcpPath}}#/tools-list-3"
+        },
+        "status" : "OK",
+        "code" : 200,
+        "_postman_previewlanguage" : "json",
+        "header" : [ {
+          "value" : "application/json",
+          "type" : "text",
+          "key" : "Content-Type"
+        } ],
+        "cookie" : [ ],
+        "body" : "{\n  \"jsonrpc\" : \"2.0\",\n  \"id\" : 3,\n  \"result\" : {\n    \"tools\" : [ {\n      \"inputSchema\" : {\n        \"type\" : \"object\"\n      },\n      \"name\" : \"example_tool\",\n      \"description\" : \"Example\"\n    } ]\n  }\n}\n"
+      }, {
+        "name" : "401 Unauthorized",
+        "originalRequest" : {
+          "method" : "POST",
+          "header" : [ {
+            "value" : "application/json",
+            "type" : "text",
+            "key" : "Content-Type"
+          }, {
+            "value" : "application/json, text/event-stream",
+            "type" : "text",
+            "key" : "Accept"
+          } ],
+          "body" : {
+            "mode" : "raw",
+            "raw" : "{\n  \"jsonrpc\" : \"2.0\",\n  \"id\" : 3,\n  \"method\" : \"tools/list\",\n  \"params\" : { }\n}\n",
+            "options" : {
+              "raw" : {
+                "language" : "json"
+              }
+            }
+          },
+          "url" : "{{baseUrl}}{{mcpPath}}#/tools-list-3"
+        },
+        "status" : "Unauthorized",
+        "code" : 401,
+        "_postman_previewlanguage" : "json",
+        "header" : [ {
+          "value" : "application/json",
+          "type" : "text",
+          "key" : "Content-Type"
+        } ],
+        "cookie" : [ ],
+        "body" : "{\n  \"error_description\" : \"Authentication is required.\",\n  \"error\" : \"unauthorized\"\n}\n"
+      } ]
+    } ]
+  }, {
+    "name" : "Positive - every tool",
+    "item" : [ {
+      "name" : "skypulse_get_forecast",
+      "request" : {
+        "method" : "POST",
+        "header" : [ {
+          "value" : "application/json",
+          "type" : "text",
+          "key" : "Content-Type"
+        }, {
+          "value" : "application/json, text/event-stream",
+          "type" : "text",
+          "key" : "Accept"
+        } ],
+        "body" : {
+          "mode" : "raw",
+          "raw" : "{\n  \"jsonrpc\" : \"2.0\",\n  \"id\" : 4,\n  \"method\" : \"tools/call\",\n  \"params\" : {\n    \"arguments\" : {\n      \"latitude\" : 1,\n      \"longitude\" : 1\n    },\n    \"name\" : \"skypulse_get_forecast\"\n  }\n}\n",
+          "options" : {
+            "raw" : {
+              "language" : "json"
+            }
+          }
+        },
+        "url" : "{{baseUrl}}{{mcpPath}}#/skypulse-get-forecast-4"
+      },
+      "event" : [ {
+        "script" : {
+          "type" : "text/javascript",
+          "exec" : [ "pm.test('HTTP 200', () => pm.response.to.have.status(200));", "const body = pm.response.json();", "pm.test('JSON-RPC result returned', () => { pm.expect(body.error).to.be.undefined; pm.expect(body.result).to.be.an('object'); });", "pm.test('Tool result has content', () => pm.expect(body.result.content).to.be.an('array'));" ]
+        },
+        "listen" : "test"
+      } ],
+      "response" : [ {
+        "name" : "200 OK",
+        "originalRequest" : {
+          "method" : "POST",
+          "header" : [ {
+            "value" : "application/json",
+            "type" : "text",
+            "key" : "Content-Type"
+          }, {
+            "value" : "application/json, text/event-stream",
+            "type" : "text",
+            "key" : "Accept"
+          } ],
+          "body" : {
+            "mode" : "raw",
+            "raw" : "{\n  \"jsonrpc\" : \"2.0\",\n  \"id\" : 4,\n  \"method\" : \"tools/call\",\n  \"params\" : {\n    \"arguments\" : {\n      \"latitude\" : 1,\n      \"longitude\" : 1\n    },\n    \"name\" : \"skypulse_get_forecast\"\n  }\n}\n",
+            "options" : {
+              "raw" : {
+                "language" : "json"
+              }
+            }
+          },
+          "url" : "{{baseUrl}}{{mcpPath}}#/skypulse-get-forecast-4"
+        },
+        "status" : "OK",
+        "code" : 200,
+        "_postman_previewlanguage" : "json",
+        "header" : [ {
+          "value" : "application/json",
+          "type" : "text",
+          "key" : "Content-Type"
+        } ],
+        "cookie" : [ ],
+        "body" : "{\n  \"jsonrpc\" : \"2.0\",\n  \"id\" : 4,\n  \"result\" : {\n    \"content\" : [ {\n      \"type\" : \"text\",\n      \"text\" : \"{ \\\"ok\\\": true }\"\n    } ]\n  }\n}\n"
+      }, {
+        "name" : "401 Unauthorized",
+        "originalRequest" : {
+          "method" : "POST",
+          "header" : [ {
+            "value" : "application/json",
+            "type" : "text",
+            "key" : "Content-Type"
+          }, {
+            "value" : "application/json, text/event-stream",
+            "type" : "text",
+            "key" : "Accept"
+          } ],
+          "body" : {
+            "mode" : "raw",
+            "raw" : "{\n  \"jsonrpc\" : \"2.0\",\n  \"id\" : 4,\n  \"method\" : \"tools/call\",\n  \"params\" : {\n    \"arguments\" : {\n      \"latitude\" : 1,\n      \"longitude\" : 1\n    },\n    \"name\" : \"skypulse_get_forecast\"\n  }\n}\n",
+            "options" : {
+              "raw" : {
+                "language" : "json"
+              }
+            }
+          },
+          "url" : "{{baseUrl}}{{mcpPath}}#/skypulse-get-forecast-4"
+        },
+        "status" : "Unauthorized",
+        "code" : 401,
+        "_postman_previewlanguage" : "json",
+        "header" : [ {
+          "value" : "application/json",
+          "type" : "text",
+          "key" : "Content-Type"
+        } ],
+        "cookie" : [ ],
+        "body" : "{\n  \"error_description\" : \"Authentication is required.\",\n  \"error\" : \"unauthorized\"\n}\n"
+      } ]
+    } ]
+  }, {
+    "name" : "Negative",
+    "item" : [ {
+      "name" : "skypulse_get_forecast - required arguments missing",
+      "request" : {
+        "method" : "POST",
+        "header" : [ {
+          "value" : "application/json",
+          "type" : "text",
+          "key" : "Content-Type"
+        }, {
+          "value" : "application/json, text/event-stream",
+          "type" : "text",
+          "key" : "Accept"
+        } ],
+        "body" : {
+          "mode" : "raw",
+          "raw" : "{\n  \"jsonrpc\" : \"2.0\",\n  \"id\" : 5,\n  \"method\" : \"tools/call\",\n  \"params\" : {\n    \"arguments\" : { },\n    \"name\" : \"skypulse_get_forecast\"\n  }\n}\n",
+          "options" : {
+            "raw" : {
+              "language" : "json"
+            }
+          }
+        },
+        "url" : "{{baseUrl}}{{mcpPath}}#/skypulse-get-forecast-required-arguments-missing-5"
+      },
+      "event" : [ {
+        "script" : {
+          "type" : "text/javascript",
+          "exec" : [ "pm.test('HTTP 200', () => pm.response.to.have.status(200));", "const body = pm.response.json();", "pm.test('Invalid params error', () => pm.expect(body.error.code).to.eql(-32602));" ]
+        },
+        "listen" : "test"
+      } ],
+      "response" : [ {
+        "name" : "200 OK",
+        "originalRequest" : {
+          "method" : "POST",
+          "header" : [ {
+            "value" : "application/json",
+            "type" : "text",
+            "key" : "Content-Type"
+          }, {
+            "value" : "application/json, text/event-stream",
+            "type" : "text",
+            "key" : "Accept"
+          } ],
+          "body" : {
+            "mode" : "raw",
+            "raw" : "{\n  \"jsonrpc\" : \"2.0\",\n  \"id\" : 5,\n  \"method\" : \"tools/call\",\n  \"params\" : {\n    \"arguments\" : { },\n    \"name\" : \"skypulse_get_forecast\"\n  }\n}\n",
+            "options" : {
+              "raw" : {
+                "language" : "json"
+              }
+            }
+          },
+          "url" : "{{baseUrl}}{{mcpPath}}#/skypulse-get-forecast-required-arguments-missing-5"
+        },
+        "status" : "OK",
+        "code" : 200,
+        "_postman_previewlanguage" : "json",
+        "header" : [ {
+          "value" : "application/json",
+          "type" : "text",
+          "key" : "Content-Type"
+        } ],
+        "cookie" : [ ],
+        "body" : "{\n  \"jsonrpc\" : \"2.0\",\n  \"id\" : 5,\n  \"error\" : {\n    \"code\" : -32602,\n    \"message\" : \"Invalid params\"\n  }\n}\n"
+      }, {
+        "name" : "401 Unauthorized",
+        "originalRequest" : {
+          "method" : "POST",
+          "header" : [ {
+            "value" : "application/json",
+            "type" : "text",
+            "key" : "Content-Type"
+          }, {
+            "value" : "application/json, text/event-stream",
+            "type" : "text",
+            "key" : "Accept"
+          } ],
+          "body" : {
+            "mode" : "raw",
+            "raw" : "{\n  \"jsonrpc\" : \"2.0\",\n  \"id\" : 5,\n  \"method\" : \"tools/call\",\n  \"params\" : {\n    \"arguments\" : { },\n    \"name\" : \"skypulse_get_forecast\"\n  }\n}\n",
+            "options" : {
+              "raw" : {
+                "language" : "json"
+              }
+            }
+          },
+          "url" : "{{baseUrl}}{{mcpPath}}#/skypulse-get-forecast-required-arguments-missing-5"
+        },
+        "status" : "Unauthorized",
+        "code" : 401,
+        "_postman_previewlanguage" : "json",
+        "header" : [ {
+          "value" : "application/json",
+          "type" : "text",
+          "key" : "Content-Type"
+        } ],
+        "cookie" : [ ],
+        "body" : "{\n  \"error_description\" : \"Authentication is required.\",\n  \"error\" : \"unauthorized\"\n}\n"
+      } ]
+    }, {
+      "name" : "skypulse_get_forecast - argument of the wrong type",
+      "request" : {
+        "method" : "POST",
+        "header" : [ {
+          "value" : "application/json",
+          "type" : "text",
+          "key" : "Content-Type"
+        }, {
+          "value" : "application/json, text/event-stream",
+          "type" : "text",
+          "key" : "Accept"
+        } ],
+        "body" : {
+          "mode" : "raw",
+          "raw" : "{\n  \"jsonrpc\" : \"2.0\",\n  \"id\" : 6,\n  \"method\" : \"tools/call\",\n  \"params\" : {\n    \"arguments\" : {\n      \"latitude\" : \"not-a-number\",\n      \"longitude\" : 1\n    },\n    \"name\" : \"skypulse_get_forecast\"\n  }\n}\n",
+          "options" : {
+            "raw" : {
+              "language" : "json"
+            }
+          }
+        },
+        "url" : "{{baseUrl}}{{mcpPath}}#/skypulse-get-forecast-argument-of-the-wrong-type-6"
+      },
+      "event" : [ {
+        "script" : {
+          "type" : "text/javascript",
+          "exec" : [ "pm.test('HTTP 200', () => pm.response.to.have.status(200));", "const body = pm.response.json();", "pm.test('Invalid params error', () => pm.expect(body.error.code).to.eql(-32602));" ]
+        },
+        "listen" : "test"
+      } ],
+      "response" : [ {
+        "name" : "200 OK",
+        "originalRequest" : {
+          "method" : "POST",
+          "header" : [ {
+            "value" : "application/json",
+            "type" : "text",
+            "key" : "Content-Type"
+          }, {
+            "value" : "application/json, text/event-stream",
+            "type" : "text",
+            "key" : "Accept"
+          } ],
+          "body" : {
+            "mode" : "raw",
+            "raw" : "{\n  \"jsonrpc\" : \"2.0\",\n  \"id\" : 6,\n  \"method\" : \"tools/call\",\n  \"params\" : {\n    \"arguments\" : {\n      \"latitude\" : \"not-a-number\",\n      \"longitude\" : 1\n    },\n    \"name\" : \"skypulse_get_forecast\"\n  }\n}\n",
+            "options" : {
+              "raw" : {
+                "language" : "json"
+              }
+            }
+          },
+          "url" : "{{baseUrl}}{{mcpPath}}#/skypulse-get-forecast-argument-of-the-wrong-type-6"
+        },
+        "status" : "OK",
+        "code" : 200,
+        "_postman_previewlanguage" : "json",
+        "header" : [ {
+          "value" : "application/json",
+          "type" : "text",
+          "key" : "Content-Type"
+        } ],
+        "cookie" : [ ],
+        "body" : "{\n  \"jsonrpc\" : \"2.0\",\n  \"id\" : 6,\n  \"error\" : {\n    \"code\" : -32602,\n    \"message\" : \"Invalid params\"\n  }\n}\n"
+      }, {
+        "name" : "401 Unauthorized",
+        "originalRequest" : {
+          "method" : "POST",
+          "header" : [ {
+            "value" : "application/json",
+            "type" : "text",
+            "key" : "Content-Type"
+          }, {
+            "value" : "application/json, text/event-stream",
+            "type" : "text",
+            "key" : "Accept"
+          } ],
+          "body" : {
+            "mode" : "raw",
+            "raw" : "{\n  \"jsonrpc\" : \"2.0\",\n  \"id\" : 6,\n  \"method\" : \"tools/call\",\n  \"params\" : {\n    \"arguments\" : {\n      \"latitude\" : \"not-a-number\",\n      \"longitude\" : 1\n    },\n    \"name\" : \"skypulse_get_forecast\"\n  }\n}\n",
+            "options" : {
+              "raw" : {
+                "language" : "json"
+              }
+            }
+          },
+          "url" : "{{baseUrl}}{{mcpPath}}#/skypulse-get-forecast-argument-of-the-wrong-type-6"
+        },
+        "status" : "Unauthorized",
+        "code" : 401,
+        "_postman_previewlanguage" : "json",
+        "header" : [ {
+          "value" : "application/json",
+          "type" : "text",
+          "key" : "Content-Type"
+        } ],
+        "cookie" : [ ],
+        "body" : "{\n  \"error_description\" : \"Authentication is required.\",\n  \"error\" : \"unauthorized\"\n}\n"
+      } ]
+    }, {
+      "name" : "unknown tool",
+      "request" : {
+        "method" : "POST",
+        "header" : [ {
+          "value" : "application/json",
+          "type" : "text",
+          "key" : "Content-Type"
+        }, {
+          "value" : "application/json, text/event-stream",
+          "type" : "text",
+          "key" : "Accept"
+        } ],
+        "body" : {
+          "mode" : "raw",
+          "raw" : "{\n  \"jsonrpc\" : \"2.0\",\n  \"id\" : 7,\n  \"method\" : \"tools/call\",\n  \"params\" : {\n    \"arguments\" : { },\n    \"name\" : \"no_such_tool\"\n  }\n}\n",
+          "options" : {
+            "raw" : {
+              "language" : "json"
+            }
+          }
+        },
+        "url" : "{{baseUrl}}{{mcpPath}}#/unknown-tool-7"
+      },
+      "event" : [ {
+        "script" : {
+          "type" : "text/javascript",
+          "exec" : [ "pm.test('HTTP 200', () => pm.response.to.have.status(200));", "const body = pm.response.json();", "pm.test('Invalid params error', () => pm.expect(body.error.code).to.eql(-32602));" ]
+        },
+        "listen" : "test"
+      } ],
+      "response" : [ {
+        "name" : "200 OK",
+        "originalRequest" : {
+          "method" : "POST",
+          "header" : [ {
+            "value" : "application/json",
+            "type" : "text",
+            "key" : "Content-Type"
+          }, {
+            "value" : "application/json, text/event-stream",
+            "type" : "text",
+            "key" : "Accept"
+          } ],
+          "body" : {
+            "mode" : "raw",
+            "raw" : "{\n  \"jsonrpc\" : \"2.0\",\n  \"id\" : 7,\n  \"method\" : \"tools/call\",\n  \"params\" : {\n    \"arguments\" : { },\n    \"name\" : \"no_such_tool\"\n  }\n}\n",
+            "options" : {
+              "raw" : {
+                "language" : "json"
+              }
+            }
+          },
+          "url" : "{{baseUrl}}{{mcpPath}}#/unknown-tool-7"
+        },
+        "status" : "OK",
+        "code" : 200,
+        "_postman_previewlanguage" : "json",
+        "header" : [ {
+          "value" : "application/json",
+          "type" : "text",
+          "key" : "Content-Type"
+        } ],
+        "cookie" : [ ],
+        "body" : "{\n  \"jsonrpc\" : \"2.0\",\n  \"id\" : 7,\n  \"error\" : {\n    \"code\" : -32602,\n    \"message\" : \"Invalid params\"\n  }\n}\n"
+      }, {
+        "name" : "401 Unauthorized",
+        "originalRequest" : {
+          "method" : "POST",
+          "header" : [ {
+            "value" : "application/json",
+            "type" : "text",
+            "key" : "Content-Type"
+          }, {
+            "value" : "application/json, text/event-stream",
+            "type" : "text",
+            "key" : "Accept"
+          } ],
+          "body" : {
+            "mode" : "raw",
+            "raw" : "{\n  \"jsonrpc\" : \"2.0\",\n  \"id\" : 7,\n  \"method\" : \"tools/call\",\n  \"params\" : {\n    \"arguments\" : { },\n    \"name\" : \"no_such_tool\"\n  }\n}\n",
+            "options" : {
+              "raw" : {
+                "language" : "json"
+              }
+            }
+          },
+          "url" : "{{baseUrl}}{{mcpPath}}#/unknown-tool-7"
+        },
+        "status" : "Unauthorized",
+        "code" : 401,
+        "_postman_previewlanguage" : "json",
+        "header" : [ {
+          "value" : "application/json",
+          "type" : "text",
+          "key" : "Content-Type"
+        } ],
+        "cookie" : [ ],
+        "body" : "{\n  \"error_description\" : \"Authentication is required.\",\n  \"error\" : \"unauthorized\"\n}\n"
+      } ]
+    }, {
+      "name" : "unknown method",
+      "request" : {
+        "method" : "POST",
+        "header" : [ {
+          "value" : "application/json",
+          "type" : "text",
+          "key" : "Content-Type"
+        }, {
+          "value" : "application/json, text/event-stream",
+          "type" : "text",
+          "key" : "Accept"
+        } ],
+        "body" : {
+          "mode" : "raw",
+          "raw" : "{\n  \"jsonrpc\" : \"2.0\",\n  \"id\" : 8,\n  \"method\" : \"no/such/method\",\n  \"params\" : { }\n}\n",
+          "options" : {
+            "raw" : {
+              "language" : "json"
+            }
+          }
+        },
+        "url" : "{{baseUrl}}{{mcpPath}}#/unknown-method-8"
+      },
+      "event" : [ {
+        "script" : {
+          "type" : "text/javascript",
+          "exec" : [ "pm.test('HTTP 200', () => pm.response.to.have.status(200));", "const body = pm.response.json();", "pm.test('Method not found', () => pm.expect(body.error.code).to.eql(-32601));" ]
+        },
+        "listen" : "test"
+      } ],
+      "response" : [ {
+        "name" : "200 OK",
+        "originalRequest" : {
+          "method" : "POST",
+          "header" : [ {
+            "value" : "application/json",
+            "type" : "text",
+            "key" : "Content-Type"
+          }, {
+            "value" : "application/json, text/event-stream",
+            "type" : "text",
+            "key" : "Accept"
+          } ],
+          "body" : {
+            "mode" : "raw",
+            "raw" : "{\n  \"jsonrpc\" : \"2.0\",\n  \"id\" : 8,\n  \"method\" : \"no/such/method\",\n  \"params\" : { }\n}\n",
+            "options" : {
+              "raw" : {
+                "language" : "json"
+              }
+            }
+          },
+          "url" : "{{baseUrl}}{{mcpPath}}#/unknown-method-8"
+        },
+        "status" : "OK",
+        "code" : 200,
+        "_postman_previewlanguage" : "json",
+        "header" : [ {
+          "value" : "application/json",
+          "type" : "text",
+          "key" : "Content-Type"
+        } ],
+        "cookie" : [ ],
+        "body" : "{\n  \"jsonrpc\" : \"2.0\",\n  \"id\" : 8,\n  \"error\" : {\n    \"code\" : -32601,\n    \"message\" : \"Method not found\"\n  }\n}\n"
+      }, {
+        "name" : "401 Unauthorized",
+        "originalRequest" : {
+          "method" : "POST",
+          "header" : [ {
+            "value" : "application/json",
+            "type" : "text",
+            "key" : "Content-Type"
+          }, {
+            "value" : "application/json, text/event-stream",
+            "type" : "text",
+            "key" : "Accept"
+          } ],
+          "body" : {
+            "mode" : "raw",
+            "raw" : "{\n  \"jsonrpc\" : \"2.0\",\n  \"id\" : 8,\n  \"method\" : \"no/such/method\",\n  \"params\" : { }\n}\n",
+            "options" : {
+              "raw" : {
+                "language" : "json"
+              }
+            }
+          },
+          "url" : "{{baseUrl}}{{mcpPath}}#/unknown-method-8"
+        },
+        "status" : "Unauthorized",
+        "code" : 401,
+        "_postman_previewlanguage" : "json",
+        "header" : [ {
+          "value" : "application/json",
+          "type" : "text",
+          "key" : "Content-Type"
+        } ],
+        "cookie" : [ ],
+        "body" : "{\n  \"error_description\" : \"Authentication is required.\",\n  \"error\" : \"unauthorized\"\n}\n"
+      } ]
+    } ]
+  }, {
+    "name" : "Security",
+    "item" : [ {
+      "name" : "no credentials",
+      "request" : {
+        "method" : "POST",
+        "header" : [ {
+          "value" : "application/json",
+          "type" : "text",
+          "key" : "Content-Type"
+        }, {
+          "value" : "application/json, text/event-stream",
+          "type" : "text",
+          "key" : "Accept"
+        } ],
+        "auth" : {
+          "type" : "noauth"
+        },
+        "body" : {
+          "mode" : "raw",
+          "raw" : "{\n  \"jsonrpc\" : \"2.0\",\n  \"id\" : 9,\n  \"method\" : \"tools/list\",\n  \"params\" : { }\n}\n",
+          "options" : {
+            "raw" : {
+              "language" : "json"
+            }
+          }
+        },
+        "url" : "{{baseUrl}}{{mcpPath}}#/no-credentials-9"
+      },
+      "event" : [ {
+        "script" : {
+          "type" : "text/javascript",
+          "exec" : [ "pm.test('HTTP 401', () => pm.response.to.have.status(401));" ]
+        },
+        "listen" : "test"
+      } ],
+      "response" : [ {
+        "name" : "200 OK",
+        "originalRequest" : {
+          "method" : "POST",
+          "header" : [ {
+            "value" : "application/json",
+            "type" : "text",
+            "key" : "Content-Type"
+          }, {
+            "value" : "application/json, text/event-stream",
+            "type" : "text",
+            "key" : "Accept"
+          } ],
+          "auth" : {
+            "type" : "noauth"
+          },
+          "body" : {
+            "mode" : "raw",
+            "raw" : "{\n  \"jsonrpc\" : \"2.0\",\n  \"id\" : 9,\n  \"method\" : \"tools/list\",\n  \"params\" : { }\n}\n",
+            "options" : {
+              "raw" : {
+                "language" : "json"
+              }
+            }
+          },
+          "url" : "{{baseUrl}}{{mcpPath}}#/no-credentials-9"
+        },
+        "status" : "OK",
+        "code" : 200,
+        "_postman_previewlanguage" : "json",
+        "header" : [ {
+          "value" : "application/json",
+          "type" : "text",
+          "key" : "Content-Type"
+        } ],
+        "cookie" : [ ],
+        "body" : "{\n  \"jsonrpc\" : \"2.0\",\n  \"id\" : 9,\n  \"result\" : {\n    \"tools\" : [ {\n      \"inputSchema\" : {\n        \"type\" : \"object\"\n      },\n      \"name\" : \"example_tool\",\n      \"description\" : \"Example\"\n    } ]\n  }\n}\n"
+      }, {
+        "name" : "401 Unauthorized",
+        "originalRequest" : {
+          "method" : "POST",
+          "header" : [ {
+            "value" : "application/json",
+            "type" : "text",
+            "key" : "Content-Type"
+          }, {
+            "value" : "application/json, text/event-stream",
+            "type" : "text",
+            "key" : "Accept"
+          } ],
+          "auth" : {
+            "type" : "noauth"
+          },
+          "body" : {
+            "mode" : "raw",
+            "raw" : "{\n  \"jsonrpc\" : \"2.0\",\n  \"id\" : 9,\n  \"method\" : \"tools/list\",\n  \"params\" : { }\n}\n",
+            "options" : {
+              "raw" : {
+                "language" : "json"
+              }
+            }
+          },
+          "url" : "{{baseUrl}}{{mcpPath}}#/no-credentials-9"
+        },
+        "status" : "Unauthorized",
+        "code" : 401,
+        "_postman_previewlanguage" : "json",
+        "header" : [ {
+          "value" : "application/json",
+          "type" : "text",
+          "key" : "Content-Type"
+        } ],
+        "cookie" : [ ],
+        "body" : "{\n  \"error_description\" : \"Authentication is required.\",\n  \"error\" : \"unauthorized\"\n}\n"
+      } ]
+    }, {
+      "name" : "invalid credentials",
+      "request" : {
+        "method" : "POST",
+        "header" : [ {
+          "value" : "application/json",
+          "type" : "text",
+          "key" : "Content-Type"
+        }, {
+          "value" : "application/json, text/event-stream",
+          "type" : "text",
+          "key" : "Accept"
+        } ],
+        "auth" : {
+          "type" : "bearer",
+          "bearer" : [ {
+            "value" : "invalid-token",
+            "type" : "string",
+            "key" : "token"
+          } ]
+        },
+        "body" : {
+          "mode" : "raw",
+          "raw" : "{\n  \"jsonrpc\" : \"2.0\",\n  \"id\" : 10,\n  \"method\" : \"tools/list\",\n  \"params\" : { }\n}\n",
+          "options" : {
+            "raw" : {
+              "language" : "json"
+            }
+          }
+        },
+        "url" : "{{baseUrl}}{{mcpPath}}#/invalid-credentials-10"
+      },
+      "event" : [ {
+        "script" : {
+          "type" : "text/javascript",
+          "exec" : [ "pm.test('HTTP 401', () => pm.response.to.have.status(401));" ]
+        },
+        "listen" : "test"
+      } ],
+      "response" : [ {
+        "name" : "200 OK",
+        "originalRequest" : {
+          "method" : "POST",
+          "header" : [ {
+            "value" : "application/json",
+            "type" : "text",
+            "key" : "Content-Type"
+          }, {
+            "value" : "application/json, text/event-stream",
+            "type" : "text",
+            "key" : "Accept"
+          } ],
+          "auth" : {
+            "type" : "bearer",
+            "bearer" : [ {
+              "value" : "invalid-token",
+              "type" : "string",
+              "key" : "token"
+            } ]
+          },
+          "body" : {
+            "mode" : "raw",
+            "raw" : "{\n  \"jsonrpc\" : \"2.0\",\n  \"id\" : 10,\n  \"method\" : \"tools/list\",\n  \"params\" : { }\n}\n",
+            "options" : {
+              "raw" : {
+                "language" : "json"
+              }
+            }
+          },
+          "url" : "{{baseUrl}}{{mcpPath}}#/invalid-credentials-10"
+        },
+        "status" : "OK",
+        "code" : 200,
+        "_postman_previewlanguage" : "json",
+        "header" : [ {
+          "value" : "application/json",
+          "type" : "text",
+          "key" : "Content-Type"
+        } ],
+        "cookie" : [ ],
+        "body" : "{\n  \"jsonrpc\" : \"2.0\",\n  \"id\" : 10,\n  \"result\" : {\n    \"tools\" : [ {\n      \"inputSchema\" : {\n        \"type\" : \"object\"\n      },\n      \"name\" : \"example_tool\",\n      \"description\" : \"Example\"\n    } ]\n  }\n}\n"
+      }, {
+        "name" : "401 Unauthorized",
+        "originalRequest" : {
+          "method" : "POST",
+          "header" : [ {
+            "value" : "application/json",
+            "type" : "text",
+            "key" : "Content-Type"
+          }, {
+            "value" : "application/json, text/event-stream",
+            "type" : "text",
+            "key" : "Accept"
+          } ],
+          "auth" : {
+            "type" : "bearer",
+            "bearer" : [ {
+              "value" : "invalid-token",
+              "type" : "string",
+              "key" : "token"
+            } ]
+          },
+          "body" : {
+            "mode" : "raw",
+            "raw" : "{\n  \"jsonrpc\" : \"2.0\",\n  \"id\" : 10,\n  \"method\" : \"tools/list\",\n  \"params\" : { }\n}\n",
+            "options" : {
+              "raw" : {
+                "language" : "json"
+              }
+            }
+          },
+          "url" : "{{baseUrl}}{{mcpPath}}#/invalid-credentials-10"
+        },
+        "status" : "Unauthorized",
+        "code" : 401,
+        "_postman_previewlanguage" : "json",
+        "header" : [ {
+          "value" : "application/json",
+          "type" : "text",
+          "key" : "Content-Type"
+        } ],
+        "cookie" : [ ],
+        "body" : "{\n  \"error_description\" : \"Authentication is required.\",\n  \"error\" : \"unauthorized\"\n}\n"
+      } ]
+    } ]
+  }, {
+    "name" : "Performance",
+    "item" : [ {
+      "name" : "ping responds quickly",
+      "request" : {
+        "method" : "POST",
+        "header" : [ {
+          "value" : "application/json",
+          "type" : "text",
+          "key" : "Content-Type"
+        }, {
+          "value" : "application/json, text/event-stream",
+          "type" : "text",
+          "key" : "Accept"
+        } ],
+        "body" : {
+          "mode" : "raw",
+          "raw" : "{\n  \"jsonrpc\" : \"2.0\",\n  \"id\" : 11,\n  \"method\" : \"ping\",\n  \"params\" : { }\n}\n",
+          "options" : {
+            "raw" : {
+              "language" : "json"
+            }
+          }
+        },
+        "url" : "{{baseUrl}}{{mcpPath}}#/ping-responds-quickly-11"
+      },
+      "event" : [ {
+        "script" : {
+          "type" : "text/javascript",
+          "exec" : [ "pm.test('HTTP 200', () => pm.response.to.have.status(200));", "pm.test('Under 500 ms', () => pm.expect(pm.response.responseTime).to.be.below(500));" ]
+        },
+        "listen" : "test"
+      } ],
+      "response" : [ {
+        "name" : "200 OK",
+        "originalRequest" : {
+          "method" : "POST",
+          "header" : [ {
+            "value" : "application/json",
+            "type" : "text",
+            "key" : "Content-Type"
+          }, {
+            "value" : "application/json, text/event-stream",
+            "type" : "text",
+            "key" : "Accept"
+          } ],
+          "body" : {
+            "mode" : "raw",
+            "raw" : "{\n  \"jsonrpc\" : \"2.0\",\n  \"id\" : 11,\n  \"method\" : \"ping\",\n  \"params\" : { }\n}\n",
+            "options" : {
+              "raw" : {
+                "language" : "json"
+              }
+            }
+          },
+          "url" : "{{baseUrl}}{{mcpPath}}#/ping-responds-quickly-11"
+        },
+        "status" : "OK",
+        "code" : 200,
+        "_postman_previewlanguage" : "json",
+        "header" : [ {
+          "value" : "application/json",
+          "type" : "text",
+          "key" : "Content-Type"
+        } ],
+        "cookie" : [ ],
+        "body" : "{\n  \"jsonrpc\" : \"2.0\",\n  \"id\" : 11,\n  \"result\" : { }\n}\n"
+      }, {
+        "name" : "401 Unauthorized",
+        "originalRequest" : {
+          "method" : "POST",
+          "header" : [ {
+            "value" : "application/json",
+            "type" : "text",
+            "key" : "Content-Type"
+          }, {
+            "value" : "application/json, text/event-stream",
+            "type" : "text",
+            "key" : "Accept"
+          } ],
+          "body" : {
+            "mode" : "raw",
+            "raw" : "{\n  \"jsonrpc\" : \"2.0\",\n  \"id\" : 11,\n  \"method\" : \"ping\",\n  \"params\" : { }\n}\n",
+            "options" : {
+              "raw" : {
+                "language" : "json"
+              }
+            }
+          },
+          "url" : "{{baseUrl}}{{mcpPath}}#/ping-responds-quickly-11"
+        },
+        "status" : "Unauthorized",
+        "code" : 401,
+        "_postman_previewlanguage" : "json",
+        "header" : [ {
+          "value" : "application/json",
+          "type" : "text",
+          "key" : "Content-Type"
+        } ],
+        "cookie" : [ ],
+        "body" : "{\n  \"error_description\" : \"Authentication is required.\",\n  \"error\" : \"unauthorized\"\n}\n"
+      } ]
+    }, {
+      "name" : "tools/list responds quickly",
+      "request" : {
+        "method" : "POST",
+        "header" : [ {
+          "value" : "application/json",
+          "type" : "text",
+          "key" : "Content-Type"
+        }, {
+          "value" : "application/json, text/event-stream",
+          "type" : "text",
+          "key" : "Accept"
+        } ],
+        "body" : {
+          "mode" : "raw",
+          "raw" : "{\n  \"jsonrpc\" : \"2.0\",\n  \"id\" : 12,\n  \"method\" : \"tools/list\",\n  \"params\" : { }\n}\n",
+          "options" : {
+            "raw" : {
+              "language" : "json"
+            }
+          }
+        },
+        "url" : "{{baseUrl}}{{mcpPath}}#/tools-list-responds-quickly-12"
+      },
+      "event" : [ {
+        "script" : {
+          "type" : "text/javascript",
+          "exec" : [ "pm.test('HTTP 200', () => pm.response.to.have.status(200));", "pm.test('Under 1000 ms', () => pm.expect(pm.response.responseTime).to.be.below(1000));" ]
+        },
+        "listen" : "test"
+      } ],
+      "response" : [ {
+        "name" : "200 OK",
+        "originalRequest" : {
+          "method" : "POST",
+          "header" : [ {
+            "value" : "application/json",
+            "type" : "text",
+            "key" : "Content-Type"
+          }, {
+            "value" : "application/json, text/event-stream",
+            "type" : "text",
+            "key" : "Accept"
+          } ],
+          "body" : {
+            "mode" : "raw",
+            "raw" : "{\n  \"jsonrpc\" : \"2.0\",\n  \"id\" : 12,\n  \"method\" : \"tools/list\",\n  \"params\" : { }\n}\n",
+            "options" : {
+              "raw" : {
+                "language" : "json"
+              }
+            }
+          },
+          "url" : "{{baseUrl}}{{mcpPath}}#/tools-list-responds-quickly-12"
+        },
+        "status" : "OK",
+        "code" : 200,
+        "_postman_previewlanguage" : "json",
+        "header" : [ {
+          "value" : "application/json",
+          "type" : "text",
+          "key" : "Content-Type"
+        } ],
+        "cookie" : [ ],
+        "body" : "{\n  \"jsonrpc\" : \"2.0\",\n  \"id\" : 12,\n  \"result\" : {\n    \"tools\" : [ {\n      \"inputSchema\" : {\n        \"type\" : \"object\"\n      },\n      \"name\" : \"example_tool\",\n      \"description\" : \"Example\"\n    } ]\n  }\n}\n"
+      }, {
+        "name" : "401 Unauthorized",
+        "originalRequest" : {
+          "method" : "POST",
+          "header" : [ {
+            "value" : "application/json",
+            "type" : "text",
+            "key" : "Content-Type"
+          }, {
+            "value" : "application/json, text/event-stream",
+            "type" : "text",
+            "key" : "Accept"
+          } ],
+          "body" : {
+            "mode" : "raw",
+            "raw" : "{\n  \"jsonrpc\" : \"2.0\",\n  \"id\" : 12,\n  \"method\" : \"tools/list\",\n  \"params\" : { }\n}\n",
+            "options" : {
+              "raw" : {
+                "language" : "json"
+              }
+            }
+          },
+          "url" : "{{baseUrl}}{{mcpPath}}#/tools-list-responds-quickly-12"
+        },
+        "status" : "Unauthorized",
+        "code" : 401,
+        "_postman_previewlanguage" : "json",
+        "header" : [ {
+          "value" : "application/json",
+          "type" : "text",
+          "key" : "Content-Type"
+        } ],
+        "cookie" : [ ],
+        "body" : "{\n  \"error_description\" : \"Authentication is required.\",\n  \"error\" : \"unauthorized\"\n}\n"
+      } ]
+    } ]
+  } ]
+}

@@ -1,0 +1,32 @@
+{
+  "name" : "skypulse-mcp",
+  "displayName" : "SkyPulse MCP",
+  "version" : "1.0.0",
+  "description" : "",
+  "mcpPath" : "/mcp",
+  "auth" : {
+    "type" : "OAUTH2"
+  },
+  "validationMode" : "PRODUCTION",
+  "upstream" : {
+    "baseUrl" : "https://api.open-meteo.com/v1",
+    "authType" : "NONE",
+    "apiKeyHeader" : "X-API-Key"
+  },
+  "resiliency" : {
+    "timeouts" : true,
+    "retry" : true,
+    "circuitBreaker" : false
+  },
+  "observability" : {
+    "health" : true,
+    "metrics" : true,
+    "tracing" : false
+  },
+  "logging" : {
+    "enterprise" : true,
+    "provider" : "CONSOLE",
+    "destination" : "CONSOLE"
+  },
+  "exceptionHandling" : true
+}
